@@ -1,0 +1,21 @@
+# Editors
+*.sublime-*
+.idea
+
+# Third-Party
+/vendor
+
+# Config
+.env*
+!.env.example
+
+# System Files
+.DS_Store
+Thumbs.db
+*.cache
+
+# Artifacts and data
+/data
+
+# Include directories with .gitkeep
+!.gitkeep
