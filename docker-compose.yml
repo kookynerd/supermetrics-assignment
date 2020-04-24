@@ -1,0 +1,10 @@
+version: '2'
+services:
+  php-cli:
+    working_dir: /var/www/project
+    command: composer install
+    build:
+      context: ./
+      dockerfile: ./docker/php-cli/Dockerfile
+    volumes:
+      - ./:/var/www/project

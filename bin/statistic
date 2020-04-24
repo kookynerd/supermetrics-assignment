@@ -1,0 +1,43 @@
+#!/usr/local/bin/php
+<?php declare(strict_types=1);
+
+set_time_limit(0);
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use App\Config;
+use App\Api\Auth\FileStorage as AuthTokenFileStorage;
+use App\Api\AuthTokenProvider;
+use App\Service\CurlWrapper;
+use App\SupermetricsIntegration\{
+    ApiClient, AuthHttpClient, PostFetcher
+};
+use App\PostStatistic\{
+    StatisticPipelineFactory,
+    AverageCharacterLengthOfPostMonth,
+    AverageNumberOfPostsPerUserMonth,
+    LongestPostByCharacterLengthMonth,
+    TotalPostsSplitByWeek
+};
+
+$apiClient = new ApiClient(
+    Config::SUPERMETRICS_CLIENT_ID,
+    Config::SUPERMETRICS_CLIENT_EMAIL,
+    Config::SUPERMETRICS_CLIENT_NAME
+);
+$tokenClient = new AuthHttpClient(new CurlWrapper(Config::SUPERMETRICS_AUTH_ENTRY_POINT), $apiClient);
+$tokenStorage = new AuthTokenFileStorage(Config::TOKEN_FILE_STORAGE);
+$authTokenProvider = new AuthTokenProvider($tokenStorage, $tokenClient);
+
+$authTokenProvider->renewToken();
+
+$postFetcher = new PostFetcher(new CurlWrapper(Config::SUPERMETRICS_POSTS_ENTRY_POINT), $authTokenProvider);
+
+$statisticPipeline = new StatisticPipelineFactory([
+    AverageCharacterLengthOfPostMonth::class,
+    LongestPostByCharacterLengthMonth::class,
+    TotalPostsSplitByWeek::class,
+    AverageNumberOfPostsPerUserMonth::class
+], $postFetcher);
+
+echo json_encode($statisticPipeline->calculateStatistic(),JSON_PRETTY_PRINT);
