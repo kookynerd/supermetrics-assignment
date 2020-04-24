@@ -3,6 +3,7 @@
 namespace App\PostStatistic;
 
 use App\DTO\PostDTO;
+use DateTime;
 
 class AverageNumberOfPostsPerUserMonth implements StatisticCalculator
 {
@@ -12,16 +13,30 @@ class AverageNumberOfPostsPerUserMonth implements StatisticCalculator
     private array $stat = [];
 
     /**
+     * @var DateTime|null
+     */
+    private ?DateTime $latestHandledDate = null;
+
+    /**
      * @param PostDTO $postDTO
      */
     public function handlePost(PostDTO $postDTO): void
     {
-        $yearMonth = $postDTO->getCreatedTime()->format('Y-m');
+        $this->latestHandledDate = $this->latestHandledDate
+            ? max($this->latestHandledDate, $postDTO->getCreatedTime())
+            : $postDTO->getCreatedTime();
+
         if (!array_key_exists($postDTO->getFromId(), $this->stat)) {
-            $this->stat[$postDTO->getFromId()] = ['posts_count' => 0, 'uniq_months' => []];
+            $this->stat[$postDTO->getFromId()] = [
+                'posts_count' => 0,
+                'earliestOccurrence' => $postDTO->getCreatedTime()
+            ];
         }
         $this->stat[$postDTO->getFromId()]['posts_count']++;
-        $this->stat[$postDTO->getFromId()]['uniq_months'][$yearMonth] = 1;
+        $this->stat[$postDTO->getFromId()]['earliestOccurrence'] = min(
+            $this->stat[$postDTO->getFromId()]['earliestOccurrence'],
+            $postDTO->getCreatedTime()
+        );
     }
 
     /**
@@ -32,8 +47,24 @@ class AverageNumberOfPostsPerUserMonth implements StatisticCalculator
         ksort($this->stat, SORT_NATURAL);
         $aggregatedStat = [];
         foreach ($this->stat as $user => $stat) {
-            $aggregatedStat[$user] = round($stat['posts_count'] / count($stat['uniq_months']), 2);
+            $months = $this->diffInFullMonths($stat['earliestOccurrence'], $this->latestHandledDate);
+            $aggregatedStat[$user] = round($stat['posts_count'] / $months, 2);
         }
         return $aggregatedStat;
+    }
+
+    /**
+     * @param DateTime $from
+     * @param DateTime $to
+     * @return int
+     */
+    private function diffInFullMonths(DateTime $from, DateTime $to): int
+    {
+        $to = DateTime::createFromFormat('Y-m-d', $to->format('Y-m-t'));
+        $from = DateTime::createFromFormat('Y-m-d', $from->format('Y-m-1'));
+
+        $diff = $to->diff($from);
+
+        return $diff->y * 12 + $diff->m + ($diff->d > 0 ? 1 : 0);
     }
 }

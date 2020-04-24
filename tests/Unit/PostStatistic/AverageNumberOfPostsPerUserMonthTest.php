@@ -41,11 +41,15 @@ class AverageNumberOfPostsPerUserMonthTest extends TestCase
             ['2019-02-01', 'user_1'],
             ['2019-02-02', 'user_1'],
             ['2019-02-28', 'user_1'],
-            ['2019-02-03', 'user_2']
+            ['2019-02-03', 'user_2'],
+            ['2019-03-01', 'user_3'],
+            ['2019-04-01', 'user_4'],
         ];
         $expectedStat = [
-            'user_1' => 2.5,
-            'user_2' => 1
+            'user_1' => 1.25,
+            'user_2' => 0.5,
+            'user_3' => 0.5,
+            'user_4' => 1,
         ];
         $posts = [];
 
